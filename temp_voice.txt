@@ -1,0 +1,114 @@
+﻿    final action = command['command'] as String?;
+    print('Voice command: $action');
+
+    try {
+      switch (action) {
+        case 'play_radio':
+          await playRadio();
+          break;
+        case 'play_station':
+          final stationName = command['station'] as String?;
+          if (stationName != null) {
+            await playStationByLanguage(stationName);
+          } else {
+            await playRadio();
+          }
+          break;
+        case 'stop':
+          await stopPlayback();
+          break;
+        case 'pause':
+          await pausePlayback();
+          break;
+        case 'resume':
+          await resumePlayback();
+          break;
+        case 'next_station':
+          await playNextStation();
+          break;
+        case 'previous_station':
+          await playPreviousStation();
+          break;
+        case 'next_song':
+          await playNext();
+          break;
+        case 'previous_song':
+          await playPrevious();
+          break;
+        case 'next_podcast':
+          if (_podcasts.isNotEmpty && _currentPodcast != null) {
+            final idx = _podcasts.indexOf(_currentPodcast!);
+            if (idx < _podcasts.length - 1) {
+              await playPodcast(_podcasts[idx + 1]);
+            }
+          }
+          break;
+        case 'previous_podcast':
+          if (_podcasts.isNotEmpty && _currentPodcast != null) {
+            final idx = _podcasts.indexOf(_currentPodcast!);
+            if (idx > 0) {
+              await playPodcast(_podcasts[idx - 1]);
+            }
+          }
+          break;
+        case 'play_podcast':
+          _currentMode = 'podcast';
+          if (_podcasts.isEmpty) await loadPodcasts();
+          if (_podcasts.isNotEmpty) await playPodcast(_podcasts.first);
+          break;
+        case 'play_music':
+          _currentMode = 'music';
+          _isMusicMode = true;
+          
+          final query = command['query'] as String? ?? '';
+          final language = command['language'] as String?;
+          
+          if (query.isNotEmpty || language != null) {
+            final songs = _songService.searchByVoiceCommand(query);
+            if (songs.isNotEmpty) {
+              final song = songs.first;
+              await playMusic(MusicTrack(
+                id: song.id,
+                title: song.title,
+                artist: song.artist,
+                url: song.previewUrl,
+                category: song.category,
+              ));
+              break;
+            }
+          }
+          
+          if (_musicTracks.isEmpty) initializeMusicTracks();
+          if (_musicTracks.isNotEmpty) await playMusic(_musicTracks.first);
+          break;
+        case 'add_favorite':
+          if (_currentMode == 'radio' && _audioService.currentStation != null) {
+            toggleFavorite(_audioService.currentStation!.id);
+          } else if (_currentMode == 'music' && _currentTrack != null) {
+            toggleFavorite(_currentTrack!.id);
+          } else if (_currentMode == 'podcast' && _currentPodcast != null) {
+            toggleFavorite(_currentPodcast!.id);
+          }
+          break;
+        case 'remove_favorite':
+          if (_currentMode == 'radio' && _audioService.currentStation != null) {
+            toggleFavorite(_audioService.currentStation!.id);
+          } else if (_currentMode == 'music' && _currentTrack != null) {
+            toggleFavorite(_currentTrack!.id);
+          } else if (_currentMode == 'podcast' && _currentPodcast != null) {
+            toggleFavorite(_currentPodcast!.id);
+          }
+          break;
+        case 'volume_up':
+        case 'volume_down':
+        case 'mute':
+        case 'unmute':
+          // Volume control handled by system
+          break;
+      }
+    } catch (e) {
+      print('Command error: $e');
+      _updateStatus('Error: $e');
+    }
+  }
+
